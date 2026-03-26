@@ -1,0 +1,11 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+bot_state.json

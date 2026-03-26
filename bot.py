@@ -1183,12 +1183,11 @@ async def process_media_group(context: ContextTypes.DEFAULT_TYPE, key: tuple[int
 
 
 async def on_startup(application: Application) -> None:
-    me = await application.bot.get_me()
     settings: Settings = application.bot_data["settings"]
     state_store: BotStateStore = application.bot_data["state_store"]
     logging.info(
         "Bot started as @%s | model=%s drop_pending_updates=%s moderation_concurrency=%s",
-        me.username,
+        application.bot.username,
         settings.openai_model,
         settings.drop_pending_updates,
         settings.max_moderation_concurrency,
@@ -1266,15 +1265,24 @@ def create_app(
     return app
 
 
-async def initialize_application(application: Application) -> None:
+async def initialize_application(
+    application: Application,
+    *,
+    start_background_tasks: bool = True,
+) -> None:
     await application.initialize()
     if application.post_init:
         await application.post_init(application)
-    await application.start()
+    if start_background_tasks:
+        await application.start()
 
 
-async def shutdown_application(application: Application) -> None:
-    if application.running:
+async def shutdown_application(
+    application: Application,
+    *,
+    stop_background_tasks: bool = True,
+) -> None:
+    if stop_background_tasks and application.running:
         await application.stop()
         if application.post_stop:
             await application.post_stop(application)

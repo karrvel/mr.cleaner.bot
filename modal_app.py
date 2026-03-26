@@ -54,13 +54,13 @@ async def lifespan(web_app: FastAPI):
         state_store=build_state_store(),
         with_updater=False,
     )
-    await initialize_application(telegram_app)
+    await initialize_application(telegram_app, start_background_tasks=False)
     web_app.state.settings = settings
     web_app.state.telegram_app = telegram_app
     try:
         yield
     finally:
-        await shutdown_application(telegram_app)
+        await shutdown_application(telegram_app, stop_background_tasks=False)
 
 
 web_app = FastAPI(lifespan=lifespan)
@@ -100,6 +100,7 @@ async def telegram_webhook(
     secrets=[env_secret],
     volumes={STATE_MOUNT_PATH: state_volume},
     env={"STATE_FILE": str(STATE_FILE_PATH)},
+    min_containers=1,
     max_containers=1,
     scaledown_window=60,
 )

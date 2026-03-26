@@ -130,6 +130,7 @@ Design choices:
 - Mutable bot state does **not** belong in a Secret. Secrets are configuration, not a runtime session store.
 - Bot state stays as a JSON file, but on a Modal Volume mounted at `/state/bot_state.json`.
 - The webhook app is pinned to `max_containers=1` so the shared JSON file is safe from cross-container write races.
+- The production webhook app keeps `min_containers=1` so it stays warm and avoids scale-to-zero cold starts.
 
 Setup:
 
@@ -191,6 +192,7 @@ Operational notes:
 - Telegram request validation uses the `X-Telegram-Bot-Api-Secret-Token` header when `WEBHOOK_SECRET` is set
 - State is durable across restarts because the JSON file is stored on the Modal Volume
 - The single-container limit is intentional. If you need horizontal scale later, replace the JSON file with a shared transactional store
+- One warm container is kept alive on purpose for low latency. If you switch back to scale-to-zero, expect cold starts again
 
 ## 10) Brand assets
 

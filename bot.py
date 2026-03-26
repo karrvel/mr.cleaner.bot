@@ -1,5 +1,6 @@
 import asyncio
 import hmac
+import inspect
 import json
 import logging
 import os
@@ -163,6 +164,7 @@ class BotStateStore:
         self.path = path
         self._after_save = after_save
         self._lock = threading.RLock()
+        self._pending_after_save_tasks: set[asyncio.Task] = set()
         self.flags, self.admin_sessions = self._load()
 
     def _load(self) -> tuple[FeatureFlags, dict[int, AdminSession]]:
@@ -216,8 +218,40 @@ class BotStateStore:
             },
         }
         self.path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        if self._after_save is not None:
-            self._after_save()
+        self._run_after_save()
+
+    def _track_after_save_task(self, task: asyncio.Task) -> None:
+        self._pending_after_save_tasks.add(task)
+
+        def _cleanup(completed_task: asyncio.Task) -> None:
+            self._pending_after_save_tasks.discard(completed_task)
+            try:
+                completed_task.result()
+            except Exception as exc:  # noqa: BLE001 - commit failures should be logged, not crash handlers
+                logging.warning("State after-save hook failed: %s", exc)
+
+        task.add_done_callback(_cleanup)
+
+    def _run_after_save(self) -> None:
+        if self._after_save is None:
+            return
+
+        result = self._after_save()
+        if not inspect.isawaitable(result):
+            return
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(result)
+            return
+
+        self._track_after_save_task(loop.create_task(result))
+
+    async def wait_for_after_save_tasks(self) -> None:
+        while self._pending_after_save_tasks:
+            tasks = tuple(self._pending_after_save_tasks)
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     def save(self) -> None:
         with self._lock:
@@ -1286,6 +1320,9 @@ async def shutdown_application(
         await application.stop()
         if application.post_stop:
             await application.post_stop(application)
+    state_store: Optional[BotStateStore] = application.bot_data.get("state_store")
+    if state_store is not None:
+        await state_store.wait_for_after_save_tasks()
     await application.shutdown()
     moderator: Optional[AdModerator] = application.bot_data.get("moderator")
     if moderator is not None:

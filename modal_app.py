@@ -42,7 +42,7 @@ env_secret = modal.Secret.from_name(SECRET_NAME)
 
 
 def build_state_store() -> BotStateStore:
-    return BotStateStore(STATE_FILE_PATH, after_save=state_volume.commit)
+    return BotStateStore(STATE_FILE_PATH, after_save=state_volume.commit.aio)
 
 
 @asynccontextmanager

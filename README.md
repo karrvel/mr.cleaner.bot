@@ -1,5 +1,9 @@
 # mr.cleaner Telegram Bot
 
+<p align="center">
+  <img src="assets/mr-cleaner-logo.png" alt="mr.cleaner logo" width="240">
+</p>
+
 Real-time Telegram moderation bot that:
 - Deletes service messages like "X joined" and "X left" in groups/supergroups.
 - Uses an OpenAI-compatible model to detect and delete ads/spam.
@@ -187,3 +191,8 @@ Operational notes:
 - Telegram request validation uses the `X-Telegram-Bot-Api-Secret-Token` header when `WEBHOOK_SECRET` is set
 - State is durable across restarts because the JSON file is stored on the Modal Volume
 - The single-container limit is intentional. If you need horizontal scale later, replace the JSON file with a shared transactional store
+
+## 10) Brand assets
+
+- PNG logo for BotFather and other uploads: `assets/mr-cleaner-logo.png`
+- SVG source logo for editing: `assets/mr-cleaner-logo.svg`
